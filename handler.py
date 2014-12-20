@@ -1,6 +1,7 @@
 
 from lxml import etree
 from xml.etree import ElementTree as ET
+import os
 import sqlite3
 import re
 
@@ -90,4 +91,71 @@ def addnew_handler(self):
     self.send_response(200)
     self.end_headers()
     self.wfile.write(response)
+
+def result_handler(self, path, qs):
+    if 'u' not in qs or 'y' not in qs or 'm' not in qs: return
+    conn = sqlite3.connect('records.db')
+    c = conn.cursor()
+    c.execute('SELECT status FROM mdetails WHERE year = ? AND month = ?',
+        (qs['y'][0], qs['m'][0]))
+    status = c.fetchone()
+    if status is None:
+        self.send_response(200)
+        self.send_header("Content-type", "text/xml")
+        self.end_headers()
+        self.wfile.write("<error>No Record</error>")
+        conn.close()
+        return
+    elif status[0] == 'standby':
+        self.send_response(200)
+        self.send_header("Content-type", "text/xml")
+        self.end_headers()
+        self.wfile.write("<error>Need update</error>")
+        conn.close()
+        return
+    c.execute('SELECT * FROM records WHERE user = ? AND year = ? AND month = ?',
+        (qs['u'][0], qs['y'][0], qs['m'][0]))
+    myrecords = c.fetchall()
+    c.execute('SELECT * FROM numbers WHERE year = ? AND month = ?',
+        (qs['y'][0], qs['m'][0]))
+    prize = c.fetchall()
     conn.close()
+    root = etree.Element('result')
+    for i in xrange(len(myrecords)):
+        n, memo = myrecords[i][3:5]
+        specials = [p[3] for p in prize if p[2] == 'special']
+        matchlength = map(len, map(os.path.commonprefix, [[pn[::-1], n[::-1]] for pn in specials]))
+        result = [i for i in xrange(len(matchlength)) if matchlength[i] == 8]
+        for r in result:
+            child = etree.Element('special')
+            etree.SubElement(child, 'number').text = n
+            etree.SubElement(child, 'memo').text = memo
+            etree.SubElement(child, 'ref').text = specials[r]
+            etree.SubElement(child, 'length').text = str(matchlength[r])
+            root.append(child)
+        normals = [p[3] for p in prize if p[2] == 'normal']
+        matchlength = map(len, map(os.path.commonprefix, [[pn[::-1], n[::-1]] for pn in normals]))
+        result = [i for i in xrange(len(matchlength)) if matchlength[i] >= 3]
+        for r in result:
+            child = etree.Element('normal')
+            etree.SubElement(child, 'number').text = n
+            etree.SubElement(child, 'memo').text = memo
+            etree.SubElement(child, 'ref').text = normals[r]
+            etree.SubElement(child, 'length').text = str(matchlength[r])
+            root.append(child)
+        wildcards = [p[3] for p in prize if p[2] == 'wildcard']
+        matchlength = map(len, map(os.path.commonprefix, [[pn[::-1], n[::-1]] for pn in wildcards]))
+        result = [i for i in xrange(len(matchlength)) if matchlength[i] == 3]
+        for r in result:
+            child = etree.Element('wildcard')
+            etree.SubElement(child, 'number').text = n
+            etree.SubElement(child, 'memo').text = memo
+            etree.SubElement(child, 'ref').text = wildcards[r]
+            etree.SubElement(child, 'length').text = str(matchlength[r])
+            root.append(child)
+    self.send_response(200)
+    self.send_header("Content-type", "text/xml")
+    self.end_headers()
+    self.wfile.write(etree.tostring(root, pretty_print = True, xml_declaration = True, encoding = 'utf-8'))
+    
+
