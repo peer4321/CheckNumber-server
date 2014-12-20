@@ -2,7 +2,7 @@
 
 import urlparse
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from handler import browse_handler, months_handler
+from handler import browse_handler, months_handler, addnew_handler
 
 host = '0.0.0.0'
 port = 5000
@@ -19,6 +19,10 @@ class MyHandler(BaseHTTPRequestHandler):
             browse_handler(self, path, qs)
         if path == '/months.xml':
             months_handler(self, path, qs)
+
+    def do_POST(self):
+        if self.path == '/submit':
+            addnew_handler(self)
 
     def log_request(self, code = None, size = None):
         print 'Request'
