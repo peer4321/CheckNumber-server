@@ -174,7 +174,7 @@ def result_handler(self, path, qs):
         for typ in ['special', 'normal', 'wildcard']:
             targets = [p[3] for p in prize if p[2] == typ]
             matchlength = map(len, map(os.path.commonprefix, [[pn[::-1], n[::-1]] for pn in targets]))
-            result = [i for i in xrange(len(matchlength)) if matchlength[i] == require[typ]]
+            result = [i for i in xrange(len(matchlength)) if matchlength[i] >= require[typ]]
             for r in result:
                 child = etree.Element(typ)
                 etree.SubElement(child, 'number').text = n
