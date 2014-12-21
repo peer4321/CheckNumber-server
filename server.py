@@ -2,7 +2,7 @@
 
 import urlparse
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from handler import browse_handler, months_handler, addnew_handler, result_handler
+from handler import browse_handler, months_handler, addnew_handler, delete_handler, result_handler
 
 host = '0.0.0.0'
 port = 5000
@@ -25,6 +25,8 @@ class MyHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/submit':
             addnew_handler(self)
+        if self.path == '/delete.xml':
+            delete_handler(self)
 
     def log_request(self, code = None, size = None):
         print 'Request'
